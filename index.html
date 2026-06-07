@@ -347,7 +347,9 @@ async function vkCall(method,params){
 async function fetchUserInfo(){
   try{
     const res=await vkCall('users.get',{fields:'photo_50'});
-    const u=Array.isArray(res)?res[0]:res;
+    const arr=Array.isArray(res)?res:(res?.items||[res]);
+    const u=arr[0];
+    if(!u||!u.first_name) return; // service token returns no user info
     document.getElementById('user-name').textContent=u.first_name;
     document.getElementById('user-avatar').src=u.photo_50||'';
     document.getElementById('user-chip').style.display='flex';
