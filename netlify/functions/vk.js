@@ -8,8 +8,16 @@ exports.handler = async function(event) {
   const qs  = new URLSearchParams({ ...params, access_token: token, v: VER });
   const url = `https://api.vk.com/method/${method}?${qs}`;
 
+  // Forward the real client IP so VK doesn't reject the token
+  const clientIP = event.headers['x-forwarded-for'] || event.headers['client-ip'] || '';
+
   try {
-    const res  = await fetch(url);
+    const res = await fetch(url, {
+      headers: {
+        'X-Forwarded-For': clientIP,
+        'User-Agent': event.headers['user-agent'] || 'Mozilla/5.0'
+      }
+    });
     const data = await res.json();
     return {
       statusCode: 200,
