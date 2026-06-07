@@ -267,17 +267,35 @@ function loadToken(){
 
 /* ── OAuth popup ── */
 function buildOAuthUrl(){
-  const redirect=encodeURIComponent('https://vkvideos.netlify.app/auth.html');
+  const redirect=encodeURIComponent('https://oauth.vk.com/blank.html');
   return`https://oauth.vk.com/authorize?client_id=${APP_ID}&display=page&redirect_uri=${redirect}&scope=video&response_type=token&v=5.131`;
 }
 
 function openLoginPopup(){
   localStorage.setItem('vkplay_channels', JSON.stringify(channels));
-  window.open(buildOAuthUrl(), 'vk_auth', 'width=500,height=420,scrollbars=yes');
+  const popup = window.open(buildOAuthUrl(), 'vk_auth', 'width=520,height=480,scrollbars=yes');
+
+  const timer = setInterval(() => {
+    try {
+      if (!popup || popup.closed) { clearInterval(timer); return; }
+      const href = popup.location.href || '';
+      // blank.html is same origin as oauth.vk.com — once redirected there we can read the hash
+      if (href.includes('blank.html') && href.includes('access_token=')) {
+        clearInterval(timer);
+        const hash = popup.location.hash.slice(1);
+        const params = Object.fromEntries(new URLSearchParams(hash));
+        if (params.access_token) {
+          popup.close();
+          receiveToken(params.access_token, params.expires_in);
+        }
+      }
+    } catch(e) {
+      // Still on oauth.vk.com login page (cross-origin) — keep waiting
+    }
+  }, 300);
 }
 
 window.addEventListener('message', function(e) {
-  if (e.origin !== 'https://vkvideos.netlify.app') return;
   if (!e.data || e.data.type !== 'vk_token') return;
   receiveToken(e.data.token, e.data.expires_in);
 });
